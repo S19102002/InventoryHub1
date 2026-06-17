@@ -1,0 +1,62 @@
+Activity 1 :Generate API Call Logic
+@page "/fetchproducts"
+
+<h3>Product List</h3>
+
+<ul>
+    @if (products != null)
+    {
+        foreach (var product in products)
+        {
+            <li>@product.Name - $@product.Price (@product.Stock in stock)</li>
+        }
+    }
+    else
+    {
+        <li>Loading...</li>
+    }
+</ul>
+
+@code {
+    private Product[]? products;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            using var httpClient = new HttpClient
+            {
+                BaseAddress = new Uri("http://localhost:5000") // adjust port to your ServerApp
+            };
+
+            var response = await httpClient.GetAsync("/api/products");
+
+            response.EnsureSuccessStatusCode(); // throws if not 2xx
+
+            var json = await response.Content.ReadAsStringAsync();
+            products = System.Text.Json.JsonSerializer.Deserialize<Product[]>(json,
+                new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        }
+        catch (HttpRequestException ex)
+        {
+            Console.WriteLine($"Request error: {ex.Message}");
+        }
+        catch (TaskCanceledException)
+        {
+            Console.WriteLine("Request timed out.");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Unexpected error: {ex.Message}");
+        }
+    }
+
+    public class Product
+    {
+        public int Id { get; set; }
+        public string Name { get; set; }
+        public double Price { get; set; }
+        public int Stock { get; set; }
+    }
+}
+
